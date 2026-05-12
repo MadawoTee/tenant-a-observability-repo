@@ -1,0 +1,95 @@
+# =============================================================================
+# Tenant identity
+# =============================================================================
+tenant:
+  # Short tenant name. Used as a label/match key everywhere.
+  name: tenant-a
+  # Environment suffix (dev/stage/prod) — feeds the namespace name.
+  env: dev
+ 
+# The namespace the tenant chart creates and deploys into.
+# Defaults to "<tenant>-monitoring-<env>" if left empty.
+namespace: ""
+ 
+# =============================================================================
+# Alerting rules — edit/extend per tenant
+# =============================================================================
+prometheusRule:
+  enabled: true
+  # Extra labels added to every alert (handy for routing & dashboards)
+  additionalLabels: {}
+  groups:
+    - name: tenant-a.rules
+      rules:
+        - alert: TenantPodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace=~"txb-dev-.*"}[5m]) > 0
+          for: 10m
+          labels:
+            severity: warning
+            tenant: tenant-a
+          annotations:
+            summary: "Pod {{ $labels.pod }} crash-looping in {{ $labels.namespace }}"
+            description: "Container restarts have been observed for at least 10 minutes."
+ 
+        - alert: TenantHighErrorRate
+          expr: |
+            sum by (namespace, service) (
+              rate(http_requests_total{namespace=~"txb-dev-.*",status=~"5.."}[5m])
+            )
+            /
+            sum by (namespace, service) (
+              rate(http_requests_total{namespace=~"txb-dev-.*"}[5m])
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            tenant: tenant-a
+          annotations:
+            summary: "High 5xx rate for {{ $labels.service }} in {{ $labels.namespace }}"
+            description: "More than 5% of requests are failing over the last 5 minutes."
+ 
+# =============================================================================
+# Alertmanager route → tenant-alert-router webhook
+# =============================================================================
+alertmanagerConfig:
+  enabled: true
+  # Route ALL alerts coming from this namespace to the tenant router.
+  # AlertmanagerConfig namespace-scoping (set in the platform values) makes
+  # this safe — this route only sees this tenant's alerts.
+  route:
+    receiver: tenant-alert-router
+    groupBy: ["alertname", "namespace", "severity"]
+    groupWait: 30s
+    groupInterval: 2m
+    repeatInterval: 4h
+ 
+# =============================================================================
+# Telegram credentials — REPLACE BEFORE APPLYING
+# =============================================================================
+telegram:
+  # If you'd rather reference an existing Secret created out-of-band,
+  # set existingSecret: my-secret and leave botToken/chatId empty.
+  existingSecret: ""
+  botToken: "REPLACE_WITH_TELEGRAM_BOT_TOKEN"
+  chatId: "REPLACE_WITH_TELEGRAM_CHAT_ID"
+ 
+# =============================================================================
+# tenant-alert-router
+# =============================================================================
+router:
+  image:
+    repository: ghcr.io/YOUR_ORG/tenant-alert-router
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 80
+    targetPort: 8080
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits:   { cpu: 100m, memory: 128Mi }
+  # Future receivers — currently Telegram-only. Flip these on once wired up.
+  features:
+    powerAutomate: false
+    teams: false

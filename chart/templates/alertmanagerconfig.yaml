@@ -1,0 +1,23 @@
+{{- if .Values.alertmanagerConfig.enabled }}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ .Values.tenant.name }}-routing
+  namespace: {{ include "tenant.namespace" . }}
+  labels:
+    tenant: {{ .Values.tenant.name }}
+    # Matched by alertmanagerConfigSelector in kube-prometheus-stack values
+    alertmanagerConfig: enabled
+spec:
+  route:
+    receiver: {{ .Values.alertmanagerConfig.route.receiver | default "tenant-alert-router" }}
+    groupBy: {{ toJson .Values.alertmanagerConfig.route.groupBy }}
+    groupWait: {{ .Values.alertmanagerConfig.route.groupWait | quote }}
+    groupInterval: {{ .Values.alertmanagerConfig.route.groupInterval | quote }}
+    repeatInterval: {{ .Values.alertmanagerConfig.route.repeatInterval | quote }}
+  receivers:
+    - name: tenant-alert-router
+      webhookConfigs:
+        - url: http://{{ include "router.fullname" . }}.{{ include "tenant.namespace" . }}.svc.cluster.local:{{ .Values.router.service.port }}/webhook
+          sendResolved: true
+{{- end }}

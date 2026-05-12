@@ -1,0 +1,12 @@
+# Helm
+charts/
+*.tgz
+ 
+# Go
+/tenant-alert-router/bin/
+/tenant-alert-router/vendor/
+ 
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

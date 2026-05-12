@@ -1,0 +1,11 @@
+apiVersion: v2
+name: tenant-observability
+description: |
+  Per-tenant observability bundle: namespace, PrometheusRule,
+  AlertmanagerConfig, Telegram secret, and the tenant-alert-router
+  webhook that forwards Alertmanager notifications to Telegram.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+maintainers:
+  - name: Platform team

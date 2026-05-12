@@ -1,0 +1,48 @@
+# Argo CD Application for the tenant observability chart.
+#
+# Where to put this file:
+#   Option A (recommended) — copy it into the INFRA repo at
+#     monitoring/argocd/apps/tenant-a-observability.yaml
+#   The App-of-Apps root will then sync it automatically.
+#
+#   Option B — apply it ad-hoc with `kubectl apply -f` against the cluster.
+#
+# What it does:
+#   Argo CD watches THIS tenant repo and renders chart/ as a Helm release
+#   inside the tenant namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tenant-a-observability
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # CHANGE ME: point at your tenant observability repo
+    repoURL: https://github.com/YOUR_ORG/tenant-observability-repo.git
+    targetRevision: main
+    path: chart
+    helm:
+      releaseName: tenant-a
+      # Override values.yaml without editing it in Git.
+      # Use this for per-environment overrides (dev/stage/prod) by pointing
+      # different Argo CD Applications at different value files.
+      valueFiles:
+        - values.yaml
+      # parameters:
+      #   - name: tenant.env
+      #     value: dev
+  destination:
+    server: https://kubernetes.default.svc
+    # The chart creates the namespace itself, but Argo CD also needs to know
+    # which namespace to scope the release to.
+    namespace: tenant-a-monitoring-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

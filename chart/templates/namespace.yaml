@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "tenant.namespace" . }}
+  labels:
+    # Required so kube-prometheus-stack's alertmanagerConfigNamespaceSelector
+    # picks up this tenant's AlertmanagerConfig.
+    alertmanagerConfig: enabled
+    tenant: {{ .Values.tenant.name }}
+    env: {{ .Values.tenant.env }}

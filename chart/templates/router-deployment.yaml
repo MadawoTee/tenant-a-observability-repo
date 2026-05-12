@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "router.fullname" . }}
+  namespace: {{ include "tenant.namespace" . }}
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.router.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tenant-alert-router
+      app.kubernetes.io/instance: {{ .Values.tenant.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "router.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: router
+          image: "{{ .Values.router.image.repository }}:{{ .Values.router.image.tag }}"
+          imagePullPolicy: {{ .Values.router.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.router.service.targetPort }}
+          env:
+            - name: LISTEN_ADDR
+              value: ":{{ .Values.router.service.targetPort }}"
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "telegram.secretName" . }}
+                  key: bot-token
+            - name: TELEGRAM_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "telegram.secretName" . }}
+                  key: chat-id
+            - name: TENANT
+              value: {{ .Values.tenant.name | quote }}
+            - name: FEATURE_POWER_AUTOMATE
+              value: {{ .Values.router.features.powerAutomate | quote }}
+            - name: FEATURE_TEAMS
+              value: {{ .Values.router.features.teams | quote }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.router.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop: ["ALL"]

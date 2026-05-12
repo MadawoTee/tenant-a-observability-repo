@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "router.fullname" . }}
+  namespace: {{ include "tenant.namespace" . }}
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: tenant-alert-router
+    app.kubernetes.io/instance: {{ .Values.tenant.name }}
+  ports:
+    - name: http
+      port: {{ .Values.router.service.port }}
+      targetPort: http
+      protocol: TCP
