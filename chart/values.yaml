@@ -80,7 +80,7 @@ telegram:
 router:
   image:
     repository: ghcr.io/madawotee/tenant-alert-router
-    tag: "0.1.0"
+    tag: "main"
     pullPolicy: IfNotPresent
   replicas: 1
   service:
