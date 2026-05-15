@@ -21,7 +21,7 @@ spec:
   project: default
   source:
     # CHANGE ME: point at your tenant observability repo
-    repoURL: https://github.com/YOUR_ORG/tenant-observability-repo.git
+    repoURL: https://github.com/MadawoTee/tenant-a-observability-repo.git
     targetRevision: main
     path: chart
     helm:
